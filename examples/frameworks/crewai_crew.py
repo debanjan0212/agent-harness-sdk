@@ -1,4 +1,4 @@
-"""SDK tools in a CrewAI crew. Install in its own env: pip install "agent-harness-sdk[crewai]"."""
+"""SDK tools in a CrewAI crew. Install in its own env: pip install -e ".[crewai]" (see README)."""
 
 from crewai import Agent, Crew, Task
 

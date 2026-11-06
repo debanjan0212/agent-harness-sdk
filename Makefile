@@ -17,4 +17,4 @@ demo:
 serve:
 	cd examples && python -m incident_commander serve
 up:
-	docker compose -f deploy/docker-compose.yaml up --build
+	docker compose $(if $(wildcard .env),--env-file .env) -f deploy/docker-compose.yaml up --build

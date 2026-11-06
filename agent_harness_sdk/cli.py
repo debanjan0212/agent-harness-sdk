@@ -20,7 +20,7 @@ def doctor() -> int:
         "model provider": os.getenv("AGENT_MODEL_PROVIDER", "deepseek"),
         "DEEPSEEK_API_KEY": "set" if os.getenv("DEEPSEEK_API_KEY") else "missing (ScriptedModel still works)",
         "DEEPSEEK_MODEL": os.getenv("DEEPSEEK_MODEL", "deepseek-flash (default)"),
-        "OTEL_EXPORTER_OTLP_ENDPOINT": os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "not set (console only)"),
+        "OTEL_EXPORTER_OTLP_ENDPOINT": os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT") or "not set (console only)",
         "HARNESS_API_KEY": "set" if os.getenv("HARNESS_API_KEY") else "not set",
     }
     for extra in ("mcp", "langchain_core", "langgraph", "llama_index.core", "agents", "crewai", "fastapi"):

@@ -11,9 +11,151 @@ wrapper around it, and you have a product. The repo includes one as a worked exa
 investigates, assigns a severity, rolls back with a human's approval and writes the postmortem draft.
 
 ```
-pip install "agent-harness-sdk[all]"     # or just: pip install agent-harness-sdk
-agent-harness doctor                     # shows what's configured and sends a test span, log and metric
+pip install "agent-harness-sdk[all] @ git+https://github.com/debanjan0212/agent-harness-sdk"
+agent-harness doctor     # shows what's configured and sends a test span, log and metric
 ```
+
+It is not on PyPI yet, so install it from GitHub as above, or clone the repo (see [Start here](#start-here)).
+
+## Start here
+
+This section is written for anyone. Go step by step and stop at the step you need. Everything works offline first, so you can try it before you have any keys.
+
+### What you need
+
+| What you want to do | What you need |
+|---|---|
+| **Try it**: the examples and the Incident Commander demo | Python 3.11 or newer, Git. No API key: everything has an offline mode. |
+| **Use a real AI model** | a DeepSeek API key from [platform.deepseek.com](https://platform.deepseek.com) (API keys page), or a key for any OpenAI-compatible provider, or [Ollama](https://ollama.com) on your machine (free) |
+| **See traces, logs and metrics in Grafana** on your laptop | Docker with Docker Compose |
+| **Investigate your real systems** | Prometheus and Loki URLs that can be reached from where the agent runs |
+| **Act through Harness.io pipelines** | a Harness account, an API token, your organisation and project IDs, and Docker (Harness's MCP server runs in a container) |
+| **Send messages to Slack** | a Slack incoming webhook URL (any Slack-compatible webhook works) |
+| **Run Incident Commander on Kubernetes** | Helm, a container registry, and any cluster: EKS, GKE, AKS, bare metal or kind |
+
+### Step 1: install and try it (5 minutes, no keys)
+
+```bash
+git clone https://github.com/debanjan0212/agent-harness-sdk.git
+cd agent-harness-sdk
+python3 -m venv .venv && source .venv/bin/activate      # on Windows use WSL2
+pip install -e ".[all,dev]"
+
+agent-harness doctor                                     # what it found: model, telemetry, installed frameworks
+python examples/quickstart.py                            # the smallest agent, end to end
+cd examples && python -m incident_commander demo --scenario bad-deploy --approve ask
+```
+
+The last command plays a real incident: an alert comes in, the agent investigates, decides on a rollback and **asks you** to approve it. Try `--scenario db-pool` (no safe fix, so it pages a human) and `--scenario injection` (a log line tries to trick the agent; it refuses).
+
+To use the SDK inside your own project instead of this repo:
+
+```bash
+pip install "agent-harness-sdk[all] @ git+https://github.com/debanjan0212/agent-harness-sdk"
+```
+
+### Step 2: keep your settings in one file
+
+```bash
+cp .env.example .env            # fill in only what you have; leave the rest empty
+set -a; source .env; set +a     # load it into this terminal (do this in every new terminal)
+agent-harness doctor            # confirm it picked up your settings
+```
+
+`.env` is in `.gitignore`, so your keys are never committed.
+
+### Step 3: connect an AI model
+
+| Provider | What to set |
+|---|---|
+| **DeepSeek** (default) | `DEEPSEEK_API_KEY`. Optional: `DEEPSEEK_MODEL` (default `deepseek-flash`) |
+| **OpenAI, or any OpenAI-compatible API** (Groq, OpenRouter, Together, vLLM, LiteLLM...) | `AGENT_MODEL_PROVIDER=openai-compatible`, `AGENT_MODEL`, `AGENT_MODEL_BASE_URL`, `AGENT_MODEL_API_KEY`, and build the model with `model_from_env()` |
+| **Ollama** (free, runs locally) | as above, with `AGENT_MODEL_BASE_URL=http://localhost:11434/v1` and no key |
+| **Anthropic, Bedrock, Vertex, Azure OpenAI** | install that provider's LangChain package and pass it in: `LangChainChatModel(ChatAnthropic(...))` |
+
+The model must support tool calling. Incident Commander uses DeepSeek as soon as `DEEPSEEK_API_KEY` is set, and its offline playbook otherwise.
+
+### Step 4: see the telemetry in Grafana (on your laptop)
+
+```bash
+docker compose --env-file .env -f deploy/docker-compose.yaml up --build     # or: make up
+```
+
+This starts Incident Commander and Grafana's all-in-one LGTM image (OpenTelemetry Collector, Tempo, Loki and Prometheus). Then:
+
+1. Open **http://localhost:8080/docs** and send a test alert with `POST /webhooks/alertmanager`, or use the `curl` in the [Incident Commander README](examples/incident_commander/README.md).
+2. Approve it: `GET /approvals`, then `POST /incidents/<id>/approve`.
+3. Open Grafana at **http://localhost:3000** (user `admin`, password `admin`). Go to Explore and pick Tempo for traces, Loki for logs or Prometheus for metrics. Data shows up within a minute.
+
+To send telemetry from your own app or another backend, set `OTEL_EXPORTER_OTLP_ENDPOINT` to any OTLP/HTTP endpoint: `http://localhost:4318` for the stack above, or your OpenTelemetry Collector, Grafana Alloy, the Datadog Agent with OTLP turned on, Honeycomb or Elastic. If your vendor needs a key, put it in `OTEL_EXPORTER_OTLP_HEADERS` (for example `x-honeycomb-team=<key>`).
+
+### Step 5: connect your tools
+
+| Tool | What you need | What to set |
+|---|---|---|
+| **Prometheus** | its URL, reachable from where the agent runs | `PROMETHEUS_URL`, e.g. `http://prometheus:9090` |
+| **Loki** | its URL | `LOKI_URL`, e.g. `http://loki:3100` |
+| **Slack** | an incoming webhook (Slack → Apps → Incoming Webhooks) | `NOTIFY_WEBHOOK_URL` |
+| **Harness.io** | an API token and your IDs, see below | `HARNESS_API_KEY`, `HARNESS_DEFAULT_ORG_ID`, `HARNESS_DEFAULT_PROJECT_ID`, `HARNESS_ROLLBACK_PIPELINE` |
+
+Managed Prometheus services that need sign-in (Amazon Managed Prometheus, Google Managed Prometheus, Grafana Cloud) need an auth proxy in front, for example `aws-sigv4-proxy`.
+
+**Setting up Harness.io:**
+
+1. In Harness, open your profile, go to **API Keys**, create an API key, then create a **token** under it. It looks like `pat.<account>.<id>.<secret>`; the SDK reads your account ID from it.
+2. Copy the **identifiers** (not the display names) of your organisation and project from their settings pages.
+3. The user who owns the token needs permission to **view and execute pipelines** in that project.
+4. For rollbacks, create a pipeline (default identifier `rollback`) with three runtime pipeline variables: `service`, `version` and `environment`. The agent fills them in and runs it, always after approval.
+5. Reading through Harness's official MCP server needs Docker, because it runs the `harness/mcp-server` image. See [`examples/frameworks/mcp_harness.py`](examples/frameworks/mcp_harness.py).
+
+To make Incident Commander use these real tools instead of the demo data, set `IC_SOURCE=live`.
+
+### Step 6: run Incident Commander on Kubernetes (EKS, GKE, AKS, bare metal)
+
+Your cluster needs a default StorageClass for the 1 GiB volume (or add `--set persistence.enabled=false`).
+
+```bash
+docker build -t <your-registry>/incident-commander:0.1.0 . && docker push <your-registry>/incident-commander:0.1.0
+
+kubectl create namespace incident-commander
+kubectl -n incident-commander create secret generic incident-commander \
+  --from-literal=DEEPSEEK_API_KEY=<key> \
+  --from-literal=HARNESS_API_KEY=<token> --from-literal=HARNESS_DEFAULT_ORG_ID=<org> --from-literal=HARNESS_DEFAULT_PROJECT_ID=<project>
+
+helm install ic deploy/helm/incident-commander -n incident-commander \
+  --set image.repository=<your-registry>/incident-commander --set image.tag=0.1.0 \
+  --set env.PROMETHEUS_URL=http://<prometheus>:9090 --set env.LOKI_URL=http://<loki>:3100 \
+  --set env.OTEL_EXPORTER_OTLP_ENDPOINT=http://<collector>:4318
+```
+
+Then send alerts to it. Add a webhook receiver to your Alertmanager with the URL
+`http://ic.incident-commander.svc/webhooks/alertmanager`. With the Prometheus Operator you can use `--set alertmanager.enabled=true` instead, but by default the operator only routes alerts from the same namespace to it.
+
+Approvals: `kubectl -n incident-commander port-forward svc/ic 8080:80`, then use http://localhost:8080/docs.
+
+### All settings
+
+| Setting | What it does |
+|---|---|
+| `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL`, `DEEPSEEK_BASE_URL` | the default model |
+| `AGENT_MODEL_PROVIDER`, `AGENT_MODEL`, `AGENT_MODEL_BASE_URL`, `AGENT_MODEL_API_KEY` | any other model, through `model_from_env()` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_HEADERS` | where telemetry goes; leave the endpoint empty for console only |
+| `OTEL_SERVICE_NAME`, `DEPLOYMENT_ENVIRONMENT` | how the service shows up in your telemetry |
+| `HARNESS_API_KEY`, `HARNESS_DEFAULT_ORG_ID`, `HARNESS_DEFAULT_PROJECT_ID`, `HARNESS_ROLLBACK_PIPELINE`, `HARNESS_BASE_URL` | Harness.io |
+| `PROMETHEUS_URL`, `LOKI_URL`, `NOTIFY_WEBHOOK_URL` | the observability and notification tools |
+| `LOG_LEVEL`, `LOG_FORMAT` | Incident Commander logs: `TRACE` to `FATAL`; `text` or `json` |
+| `IC_SOURCE`, `IC_SCENARIO`, `IC_DB`, `PORT` | Incident Commander: `live` or demo data, which demo, SQLite file, HTTP port |
+
+### Something not working?
+
+| Problem | What to check |
+|---|---|
+| `agent-harness: command not found` | activate the virtualenv: `source .venv/bin/activate` |
+| `doctor` says no model is configured | load your `.env` in this terminal: `set -a; source .env; set +a` |
+| model error 401 or 402 | 401 means a wrong key; 402 from DeepSeek means the account has no balance |
+| nothing in Grafana | the compose stack is running and `OTEL_EXPORTER_OTLP_ENDPOINT` is set; wait a minute |
+| installing CrewAI breaks other packages | CrewAI pins older `mcp` and `openai`; install it in its own virtualenv (`make crewai`) |
+| Harness returns 401 or 404 | the token is valid, and the org and project are identifiers, not display names |
 
 ## What every agent gets
 
@@ -43,7 +185,7 @@ flowchart LR
 
 Each stage is a method (`read`, `analyse`, `decide`, `act`) you can override in a subclass.
 
-## Quick start
+## Your first agent
 
 ```python
 from agent_harness_sdk import Agent, CallbackApprover, DeepSeekModel, setup_telemetry, tool
@@ -185,26 +327,6 @@ python -m incident_commander serve                        # HTTP API on :8080, /
 It adds a SQLite incident store with a timeline, severity rules, a domain policy rule, product metrics
 (`incidents.opened`, `incidents.closed`, `incidents.time_to_mitigate`), an Alertmanager webhook, an approval API and
 a postmortem draft. Details in [its README](examples/incident_commander/README.md).
-
-## Run and deploy
-
-| Where | How |
-|---|---|
-| Laptop, with dashboards | `docker compose -f deploy/docker-compose.yaml up --build`: Incident Commander + Grafana LGTM (OTel collector, Tempo, Loki, Prometheus). Grafana on :3000. |
-| Any Kubernetes (EKS, GKE, AKS, OpenShift, k3s, bare metal) | `helm install ic deploy/helm/incident-commander --set alertmanager.enabled=true` |
-| Your own app | `pip install agent-harness-sdk` and import it |
-
-## Configuration
-
-| Variable | Used for |
-|---|---|
-| `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL`, `DEEPSEEK_BASE_URL` | Default model |
-| `AGENT_MODEL_PROVIDER`, `AGENT_MODEL`, `AGENT_MODEL_BASE_URL`, `AGENT_MODEL_API_KEY` | `model_from_env()` |
-| `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`, `DEPLOYMENT_ENVIRONMENT` | Telemetry |
-| `HARNESS_API_KEY`, `HARNESS_DEFAULT_ORG_ID`, `HARNESS_DEFAULT_PROJECT_ID`, `HARNESS_BASE_URL` | Harness.io pack and MCP server |
-| `PROMETHEUS_URL`, `LOKI_URL`, `NOTIFY_WEBHOOK_URL` | Observability packs |
-
-Copy [`.env.example`](.env.example) to get started.
 
 ## Develop
 
