@@ -1,0 +1,34 @@
+image:
+  repository: ghcr.io/debanjan0212/incident-commander
+  tag: ""            # defaults to the chart appVersion
+  pullPolicy: IfNotPresent
+
+replicas: 1          # approvals and incidents live in one SQLite file; keep 1 unless you swap the store
+port: 8080
+
+env:
+  LOG_LEVEL: INFO
+  LOG_FORMAT: json
+  IC_SOURCE: live
+  PROMETHEUS_URL: http://prometheus-operated.monitoring:9090
+  LOKI_URL: http://loki-gateway.monitoring
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.observability:4318
+  DEPLOYMENT_ENVIRONMENT: prod
+
+# Secret with DEEPSEEK_API_KEY / HARNESS_API_KEY / HARNESS_DEFAULT_ORG_ID / HARNESS_DEFAULT_PROJECT_ID.
+# Create it yourself, or with External Secrets from Vault / AWS / GCP / Azure.
+existingSecret: incident-commander
+
+persistence:
+  enabled: true
+  size: 1Gi
+  storageClass: ""
+
+resources:
+  requests: {cpu: 100m, memory: 256Mi}
+  limits: {memory: 512Mi}
+
+alertmanager:
+  # Adds an AlertmanagerConfig (Prometheus Operator) that sends firing alerts to the webhook.
+  enabled: false
+  matchers: [{name: severity, value: critical, matchType: "="}]

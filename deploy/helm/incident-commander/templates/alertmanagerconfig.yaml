@@ -1,0 +1,16 @@
+{{- if .Values.alertmanager.enabled }}
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: {{ .Release.Name }}
+  labels: {{- include "ic.labels" . | nindent 4 }}
+spec:
+  route:
+    receiver: incident-commander
+    matchers: {{- toYaml .Values.alertmanager.matchers | nindent 6 }}
+  receivers:
+    - name: incident-commander
+      webhookConfigs:
+        - url: "http://{{ .Release.Name }}.{{ .Release.Namespace }}.svc/webhooks/alertmanager"
+          sendResolved: false
+{{- end }}

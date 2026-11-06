@@ -1,0 +1,8 @@
+Incident Commander is running.
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ .Release.Name }} 8080:80
+  open http://localhost:8080/docs
+
+Point Alertmanager at http://{{ .Release.Name }}.{{ .Release.Namespace }}.svc/webhooks/alertmanager
+(or set alertmanager.enabled=true with the Prometheus Operator).
+Pending approvals: GET /approvals, then POST /incidents/<id>/approve {"by": "you"}.

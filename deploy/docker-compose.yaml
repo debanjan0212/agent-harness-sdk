@@ -1,0 +1,31 @@
+# Incident Commander + Grafana LGTM (OTel collector, Tempo, Loki, Prometheus/Mimir, Grafana) in one command:
+#   docker compose -f deploy/docker-compose.yaml up --build
+# Grafana: http://localhost:3000 (admin/admin)   API: http://localhost:8080/docs
+services:
+  lgtm:
+    image: grafana/otel-lgtm:latest
+    ports: ["3000:3000", "4317:4317", "4318:4318"]
+
+  incident-commander:
+    build: {context: .., dockerfile: Dockerfile}
+    ports: ["8080:8080"]
+    depends_on: [lgtm]
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://lgtm:4318
+      OTEL_SERVICE_NAME: incident-commander
+      DEPLOYMENT_ENVIRONMENT: local
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      # Leave DEEPSEEK_API_KEY empty to run with the offline playbook brain.
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      # IC_SOURCE=live + the URLs below to investigate your real stack instead of the demo fixture.
+      IC_SOURCE: ${IC_SOURCE:-fixture}
+      IC_SCENARIO: ${IC_SCENARIO:-bad-deploy}
+      PROMETHEUS_URL: ${PROMETHEUS_URL:-}
+      LOKI_URL: ${LOKI_URL:-}
+      HARNESS_API_KEY: ${HARNESS_API_KEY:-}
+      HARNESS_DEFAULT_ORG_ID: ${HARNESS_DEFAULT_ORG_ID:-}
+      HARNESS_DEFAULT_PROJECT_ID: ${HARNESS_DEFAULT_PROJECT_ID:-}
+    volumes: ["ic-data:/data"]
+
+volumes:
+  ic-data: {}

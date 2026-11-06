@@ -1,0 +1,15 @@
+{
+  "alert": {"status": "firing", "labels": {"alertname": "HighErrorRate", "service": "checkout", "namespace": "shop", "severity": "page"},
+            "annotations": {"summary": "checkout 5xx error rate above 5%"}, "startsAt": "2026-11-06T12:10:00Z"},
+  "health": {
+    "checkout": {"service": "checkout", "rps": 70, "error_rate": 0.11, "error_rate_1h_ago": 0.002, "p95_ms": 5100, "p95_ms_1h_ago": 200, "cpu_pct": 22, "replicas": 3},
+    "payments": {"service": "payments", "rps": 38, "error_rate": 0.001, "error_rate_1h_ago": 0.001, "p95_ms": 90, "p95_ms_1h_ago": 92, "cpu_pct": 25, "replicas": 2}
+  },
+  "dependencies": {"checkout": ["payments"], "payments": []},
+  "deploys": {"checkout": [{"version": "1.3.2", "previous": "1.3.1", "minutes_ago": 2880, "pipeline": "deploy-checkout", "execution_id": "Pa81b"}]},
+  "logs": {"checkout": [
+    "{\"level\": \"error\", \"message\": \"timeout acquiring connection from pool after 5000ms (size=10, in_use=10)\"}",
+    "{\"level\": \"error\", \"message\": \"timeout acquiring connection from pool after 5000ms (size=10, in_use=10)\"}",
+    "{\"level\": \"error\", \"message\": \"POST /checkout failed with 503\"}"
+  ]}
+}
