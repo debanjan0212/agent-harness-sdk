@@ -139,3 +139,12 @@ def test_async_runs_in_parallel():
 
     runs = asyncio.run(go())
     assert {r.status for r in runs} == {"completed"} and len({r.id for r in runs}) == 5
+
+
+def test_card_numbers_are_redacted_without_eating_what_follows():
+    from agent_harness_sdk.guardrails import redact
+
+    assert redact("card 4242 4242 4242 4242 user=dev") == ("card <card-number> user=dev", 1)
+    assert redact("card 4242-4242-4242-4242, declined") == ("card <card-number>, declined", 1)
+    assert redact("card 4242424242424242.") == ("card <card-number>.", 1)
+    assert redact("order 123456 shipped") == ("order 123456 shipped", 0)  # too short to be a card
