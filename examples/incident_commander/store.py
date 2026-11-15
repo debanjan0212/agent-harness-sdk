@@ -17,6 +17,23 @@ create table if not exists incidents (
 create table if not exists timeline (incident_id text, ts real, kind text, detail text);
 """
 
+# The incident columns update() may set. Anything else is refused before it reaches SQL.
+UPDATABLE = frozenset(
+    {
+        "title",
+        "service",
+        "severity",
+        "status",
+        "mitigated_at",
+        "summary",
+        "cause",
+        "action",
+        "action_status",
+        "analysis",
+        "postmortem",
+    }
+)
+
 
 class IncidentStore:
     def __init__(self, path: str | Path = ":memory:"):
@@ -45,10 +62,15 @@ class IncidentStore:
     def update(self, iid: str, **fields) -> None:
         if not fields:
             return
+        # Column names cannot be bound as parameters, so they are checked against the schema instead.
+        # Values are always bound.
+        unknown = sorted(set(fields) - UPDATABLE)
+        if unknown:
+            raise ValueError("unknown incident field(s): " + ", ".join(unknown))
         cols = ", ".join(k + " = ?" for k in fields)
         values = [json.dumps(v) if isinstance(v, dict | list) else v for v in fields.values()]
         with self.lock:
-            self.db.execute("update incidents set " + cols + " where id = ?", [*values, iid])
+            self.db.execute("update incidents set " + cols + " where id = ?", [*values, iid])  # nosec B608
             self.db.commit()
 
     def get(self, iid: str) -> dict | None:

@@ -1,5 +1,8 @@
 # agent-harness-sdk
 
+![ci](https://github.com/debanjan0212/agent-harness-sdk/actions/workflows/ci.yml/badge.svg)
+![security](https://github.com/debanjan0212/agent-harness-sdk/actions/workflows/security.yml/badge.svg)
+
 **A base SDK for building production agents that read, analyse, decide and act, with OpenTelemetry built in.**
 DeepSeek is the default model, but any OpenAI-compatible model or LangChain chat model works. You can use it
 on its own, or bring its tools and guardrails into LangChain, LangGraph, CrewAI, LlamaIndex, the OpenAI
@@ -144,7 +147,7 @@ Approvals: `kubectl -n incident-commander port-forward svc/ic 8080:80`, then use
 | `HARNESS_API_KEY`, `HARNESS_DEFAULT_ORG_ID`, `HARNESS_DEFAULT_PROJECT_ID`, `HARNESS_ROLLBACK_PIPELINE`, `HARNESS_BASE_URL` | Harness.io |
 | `PROMETHEUS_URL`, `LOKI_URL`, `NOTIFY_WEBHOOK_URL` | the observability and notification tools |
 | `LOG_LEVEL`, `LOG_FORMAT` | Incident Commander logs: `TRACE` to `FATAL`; `text` or `json` |
-| `IC_SOURCE`, `IC_SCENARIO`, `IC_DB`, `PORT` | Incident Commander: `live` or demo data, which demo, SQLite file, HTTP port |
+| `IC_SOURCE`, `IC_SCENARIO`, `IC_DB`, `PORT`, `HOST` | Incident Commander: `live` or demo data, which demo, SQLite file, HTTP port, listen address (`0.0.0.0`; set `127.0.0.1` to keep it local) |
 
 ### Something not working?
 

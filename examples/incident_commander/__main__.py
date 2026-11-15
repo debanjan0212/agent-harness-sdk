@@ -38,7 +38,10 @@ def serve(port: int) -> int:
 
     from .server import create_app
 
-    uvicorn.run(create_app(), host="0.0.0.0", port=port, log_config=None)
+    # All interfaces by default: this is the container entrypoint and the Service has to reach it.
+    # Set HOST=127.0.0.1 to keep it local.
+    host = os.getenv("HOST", "0.0.0.0")  # nosec B104
+    uvicorn.run(create_app(), host=host, port=port, log_config=None)
     return 0
 
 
