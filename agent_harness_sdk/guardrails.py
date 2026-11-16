@@ -16,7 +16,8 @@ SECRET_PATTERNS = [
     ),
     (re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]+?-----END [A-Z ]*PRIVATE KEY-----"), "<private-key>"),
     (re.compile(r"\bpat\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b"), "<harness-pat>"),
-    (re.compile(r"\b(?:\d[ -]?){13,16}\b"), "<card-number>"),
+    # 13 to 16 digits with single spaces or dashes between them, and nothing after the last digit
+    (re.compile(r"\b\d(?:[ -]?\d){12,15}\b"), "<card-number>"),
 ]
 INJECTION = re.compile(
     r"(?i)(ignore (all |any )?(previous|prior|above) (instructions|prompts)|you are now|system (prompt|override)|"

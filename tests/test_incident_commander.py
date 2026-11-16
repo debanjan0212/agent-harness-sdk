@@ -77,3 +77,17 @@ def test_api_flow_with_human_approval():
     inc, pm, source = asyncio.run(go())
     assert inc["status"] == "mitigated" and source.actions
     assert any(e["detail"] == "approved by debanjan" for e in inc["timeline"]) and "# Postmortem draft" in pm
+
+
+def test_store_refuses_unknown_columns():
+    # update() builds its column list from keyword names, so only real incident columns may get through.
+    import pytest
+    from incident_commander.store import IncidentStore
+
+    store = IncidentStore()
+    iid = store.open("HighErrorRate on checkout", "checkout")
+    store.update(iid, severity="SEV2", status="investigating")
+    assert store.get(iid)["severity"] == "SEV2"
+    with pytest.raises(ValueError, match="unknown incident field"):
+        store.update(iid, **{"severity = 'SEV4' --": "x"})
+    assert store.get(iid)["severity"] == "SEV2"

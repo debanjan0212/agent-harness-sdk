@@ -1,0 +1,15 @@
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+  # keeps the SHA pins in .github/workflows current
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

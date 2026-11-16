@@ -1,0 +1,12 @@
+# gitleaks runs over the full history in .github/workflows/security.yml.
+# Everything is scanned with the default rules. The exceptions are listed here
+# by their exact values, with the reason, so nothing else can hide behind them.
+title = "agent-harness-sdk"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Made-up credentials in the test suite. They exist to prove that secrets are redacted before the model sees them, and that the Harness client sends its key. Neither was ever a real credential."
+regexTarget = "match"
+regexes = ['''sk_live_abc123''', '''pat\.ACC123\.tok456\.secret789''']
