@@ -16,9 +16,12 @@ SECRET_PATTERNS = [
     ),
     (re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]+?-----END [A-Z ]*PRIVATE KEY-----"), "<private-key>"),
     (re.compile(r"\bpat\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b"), "<harness-pat>"),
-    # 13 to 16 digits with single spaces or dashes between them, and nothing after the last digit
-    (re.compile(r"\b\d(?:[ -]?\d){12,15}\b"), "<card-number>"),
+    # scheme://user:password@host, as in a database or broker connection string; the user name stays readable
+    (re.compile(r"(?i)\b([a-z][a-z0-9+.-]*://[^\s/:@]*):[^\s/@]+@"), r"\1:<redacted>@"),
 ]
+# 13 to 16 digits with single spaces or dashes between them, and nothing after the last digit.
+# Only a candidate: millisecond timestamps and order ids have this shape too, so the checksum decides.
+CARD = re.compile(r"\b\d(?:[ -]?\d){12,15}\b")
 INJECTION = re.compile(
     r"(?i)(ignore (all |any )?(previous|prior|above) (instructions|prompts)|you are now|system (prompt|override)|"
     r"disregard .{0,30}(rules|instructions)|reveal .{0,20}(prompt|secrets?)|kubectl (delete|exec|apply)|"
@@ -26,12 +29,36 @@ INJECTION = re.compile(
 )
 
 
+def luhn_ok(digits: str) -> bool:
+    """The checksum every payment card number passes. About one random number in ten passes it by chance."""
+    total = 0
+    for i, ch in enumerate(reversed(digits)):
+        d = int(ch)
+        if i % 2 == 1:
+            d *= 2
+            if d > 9:
+                d -= 9
+        total += d
+    return total % 10 == 0
+
+
 def redact(text: str) -> tuple[str, int]:
     count = 0
     for rx, repl in SECRET_PATTERNS:
         text, n = rx.subn(repl, text)
         count += n
-    return text, count
+
+    cards = 0
+
+    def mask_card(m: re.Match) -> str:
+        nonlocal cards
+        if not luhn_ok(re.sub(r"[ -]", "", m.group(0))):
+            return m.group(0)
+        cards += 1
+        return "<card-number>"
+
+    text = CARD.sub(mask_card, text)
+    return text, count + cards
 
 
 def find_injection(text: str) -> str | None:

@@ -14,7 +14,7 @@ wrong or manipulated ([`agent_harness_sdk/guardrails.py`](agent_harness_sdk/guar
 - **Read first.** Agents gather evidence with read-only tools.
 - **One action, checked by policy.** A decided action passes policy written in code before anything runs.
 - **A person approves changes.** Approval-required actions wait for an Approver. A denial is escalated to a person.
-- **Secrets are redacted** from every tool result before the model sees it: AWS keys, JWTs, bearer tokens, key=value secrets, private keys, Harness tokens and card numbers.
+- **Secrets are redacted** from every tool result before the model sees it: AWS keys, JWTs, bearer tokens, key=value secrets, private keys, Harness tokens, passwords inside connection URLs, and card numbers (13 to 16 digits that pass the card checksum, so timestamps and order ids are left alone).
 - **Prompt injection is flagged.** Instruction-like text in tool output is treated as data and recorded.
 - **Budgets.** Hard limits on steps, tool calls, tokens, output size and run time.
 - **Everything is recorded** as OpenTelemetry traces, logs, metrics and events.
