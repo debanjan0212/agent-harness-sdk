@@ -7,7 +7,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
-      matrix: {python: ["3.11", "3.12", "3.13"]}
+      # every Python the package claims to support, including the one the container image may move to
+      matrix: {python: ["3.11", "3.12", "3.13", "3.14", "3.15"]}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
