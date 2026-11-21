@@ -148,3 +148,26 @@ def test_card_numbers_are_redacted_without_eating_what_follows():
     assert redact("card 4242-4242-4242-4242, declined") == ("card <card-number>, declined", 1)
     assert redact("card 4242424242424242.") == ("card <card-number>.", 1)
     assert redact("order 123456 shipped") == ("order 123456 shipped", 0)  # too short to be a card
+
+
+def test_a_number_that_fails_the_card_checksum_is_left_alone():
+    from agent_harness_sdk.guardrails import luhn_ok, redact
+
+    assert luhn_ok("4242424242424242")
+    assert not luhn_ok("1794776069482")
+    # a millisecond timestamp and an order id have the shape of a card number, and are evidence the model needs
+    assert redact("ts=1794776069482 status=200") == ("ts=1794776069482 status=200", 0)
+    assert redact("order 1234567890123 shipped") == ("order 1234567890123 shipped", 0)
+    # a real card next to one of them is still masked, and only the card is counted
+    assert redact("ts=1794776069482 card 4242 4242 4242 4242") == ("ts=1794776069482 card <card-number>", 1)
+
+
+def test_a_password_inside_a_connection_url_is_redacted():
+    from agent_harness_sdk.guardrails import redact
+
+    assert redact("postgres://shop:hunter2@db:5432/shop") == ("postgres://shop:<redacted>@db:5432/shop", 1)
+    assert redact("redis://:s3cr3t@cache:6379/0") == ("redis://:<redacted>@cache:6379/0", 1)
+    assert redact("amqps://svc:p%40ss@mq.internal/vhost") == ("amqps://svc:<redacted>@mq.internal/vhost", 1)
+    # a port, or an @ later in the path, is not a password
+    assert redact("GET http://checkout:8080/cart/@me 200") == ("GET http://checkout:8080/cart/@me 200", 0)
+    assert redact("see https://example.com/docs") == ("see https://example.com/docs", 0)
