@@ -10,8 +10,8 @@ jobs:
       # every Python the package claims to support, including the one the container image may move to
       matrix: {python: ["3.11", "3.12", "3.13", "3.14", "3.15"]}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with: {python-version: "${{ matrix.python }}"}
       - run: pip install -e ".[all,dev]"
       - run: ruff check . && ruff format --check .
@@ -24,8 +24,8 @@ jobs:
   core-only:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with: {python-version: "3.12"}
       - run: pip install -e . pytest pytest-asyncio
       - run: pytest -q   # framework tests skip; the core must work with no extras
@@ -33,8 +33,8 @@ jobs:
   crewai:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with: {python-version: "3.12"}
       - run: pip install -e ".[crewai,dev]"
       - run: pytest -q tests/test_crewai.py
@@ -42,8 +42,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: azure/setup-helm@v4
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v5
       - run: helm lint deploy/helm/incident-commander
       - run: |
           curl -sL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
