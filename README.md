@@ -306,6 +306,34 @@ Retries on 408/409/429/5xx (respecting `Retry-After`), JSON mode for structured 
 Other packs: `prometheus_tools()` (PromQL), `loki_tools()` (LogQL with pattern summaries, so a thousand lines become
 the top patterns), `notify_tools()` (Slack-compatible webhook).
 
+## Run a fleet under Themis
+
+[Themis](https://github.com/debanjan0212/themis-agent-sre) is an SRE control plane for agent fleets. It reads the
+OpenTelemetry the harness already sends, gives every agent an error budget, and moves an agent that spends it
+too fast from autonomous to supervised to suspended. Point the exporter at it to be watched; add two lines to be
+governed:
+
+```python
+from agent_harness_sdk import ThemisApprover, ThemisGate, ThemisPolicy
+
+gate = ThemisGate(os.environ["THEMIS_URL"], os.environ["THEMIS_INGEST_KEY"]).start()
+agent = Agent("deployer", model=..., tools=[...], policy=ThemisPolicy(gate=gate), approver=ThemisApprover(gate))
+```
+
+| Themis says | What the harness does |
+|---|---|
+| autonomous | your `Policy` decides, as without Themis |
+| supervised | every action waits for a person in the Themis dashboard, even one your `Policy` lets run alone |
+| suspended | the agent still reads and analyses; every action it proposes goes to a person instead |
+| tool outside the agent's allow-list | blocked and reported; five reports in five minutes suspend the agent |
+| tool quarantined | blocked until the quarantine ends |
+
+`ThemisPolicy` takes every `Policy` setting (`ThemisPolicy(gate=gate, min_confidence=0.8, rules=[...])`). The gate
+refreshes a snapshot every second in the background, so a check costs nothing and agents keep working on the last
+snapshot if Themis is briefly down. Approvals fail closed: no answer is a no. Each block is recorded as a denied
+tool span, so Themis names the agent as the cause of the failed run. `tests/test_themis.py` covers each row of the
+table; Themis's own ecosystem tests run the same classes against the real control plane.
+
 ## Wrap it into your own product
 
 [`examples/wrap_any_app.py`](examples/wrap_any_app.py) is the pattern in about 80 lines:

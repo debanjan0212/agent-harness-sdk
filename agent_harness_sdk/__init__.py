@@ -25,6 +25,7 @@ from agent_harness_sdk.models import (
     model_from_env,
 )
 from agent_harness_sdk.telemetry import TRACE, AgentLogger, Telemetry, get_logger, setup_telemetry
+from agent_harness_sdk.themis import ThemisApprover, ThemisGate, ThemisPolicy
 from agent_harness_sdk.tools import Tool, ToolError, ToolRegistry, tool
 
 __version__ = "0.1.0"
@@ -60,6 +61,9 @@ __all__ = [
     "Run",
     "ScriptedModel",
     "Telemetry",
+    "ThemisApprover",
+    "ThemisGate",
+    "ThemisPolicy",
     "Tool",
     "ToolCall",
     "ToolError",
