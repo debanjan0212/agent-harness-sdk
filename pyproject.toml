@@ -21,13 +21,14 @@ dependencies = [
 
 [project.optional-dependencies]
 mcp = ["mcp>=2.3,<3"]
+anthropic = ["anthropic>=2.14,<3"]
 langchain = ["langchain-core>=0.3"]
 langgraph = ["langgraph>=0.2", "langchain-core>=0.3"]
 crewai = ["crewai>=0.80"]
 llamaindex = ["llama-index-core>=0.12"]
 openai-agents = ["openai-agents>=0.2"]
 server = ["fastapi>=0.110", "uvicorn>=0.29"]
-all = ["agent-harness-sdk[mcp,langchain,langgraph,llamaindex,openai-agents,server]"]
+all = ["agent-harness-sdk[mcp,anthropic,langchain,langgraph,llamaindex,openai-agents,server]"]
 dev = ["pytest>=8", "pytest-asyncio>=0.23", "ruff>=0.6"]
 
 [project.scripts]
