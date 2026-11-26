@@ -4,7 +4,7 @@
 ![security](https://github.com/debanjan0212/agent-harness-sdk/actions/workflows/security.yml/badge.svg)
 
 **A base SDK for building production agents that read, analyse, decide and act, with OpenTelemetry built in.**
-DeepSeek is the default model, but any OpenAI-compatible model or LangChain chat model works. You can use it
+DeepSeek is the default model, but Claude, any OpenAI-compatible model or any LangChain chat model works. You can use it
 on its own, or bring its tools and guardrails into LangChain, LangGraph, CrewAI, LlamaIndex, the OpenAI
 Agents SDK or any MCP client.
 
@@ -74,7 +74,8 @@ agent-harness doctor            # confirm it picked up your settings
 | **DeepSeek** (default) | `DEEPSEEK_API_KEY`. Optional: `DEEPSEEK_MODEL` (default `deepseek-flash`) |
 | **OpenAI, or any OpenAI-compatible API** (Groq, OpenRouter, Together, vLLM, LiteLLM...) | `AGENT_MODEL_PROVIDER=openai-compatible`, `AGENT_MODEL`, `AGENT_MODEL_BASE_URL`, `AGENT_MODEL_API_KEY`, and build the model with `model_from_env()` |
 | **Ollama** (free, runs locally) | as above, with `AGENT_MODEL_BASE_URL=http://localhost:11434/v1` and no key |
-| **Anthropic, Bedrock, Vertex, Azure OpenAI** | install that provider's LangChain package and pass it in: `LangChainChatModel(ChatAnthropic(...))` |
+| **Claude (Anthropic)** | `pip install agent-harness-sdk[anthropic]`, then `AGENT_MODEL_PROVIDER=anthropic` and optionally `AGENT_MODEL` (default `claude-haiku-5-5`). The key is `ANTHROPIC_API_KEY`, or no key at all with workload identity federation from CI |
+| **Bedrock, Vertex, Azure OpenAI** | install that provider's LangChain package and pass it in: `LangChainChatModel(...)` |
 
 The model must support tool calling. Incident Commander uses DeepSeek as soon as `DEEPSEEK_API_KEY` is set, and its offline playbook otherwise.
 
@@ -285,8 +286,9 @@ Examples are in [`examples/frameworks/`](examples/frameworks).
 |---|---|
 | DeepSeek (default) | `DeepSeekModel()` reads `DEEPSEEK_API_KEY`, `DEEPSEEK_MODEL` (default `deepseek-flash`) and `DEEPSEEK_BASE_URL`. `thinking=True` turns on reasoning mode. Reasoning text is recorded but never sent back to the API. |
 | Any OpenAI-compatible API | `OpenAICompatibleModel(model, base_url, api_key)`, which covers OpenAI, Azure OpenAI, Groq, Together, OpenRouter, vLLM, Ollama and LiteLLM proxy |
-| Anything LangChain supports | `LangChainChatModel(ChatAnthropic(...))`, Bedrock, Vertex, ... |
-| From env | `model_from_env()` reads `AGENT_MODEL_PROVIDER=deepseek|openai-compatible`, `AGENT_MODEL`, `AGENT_MODEL_BASE_URL`, `AGENT_MODEL_API_KEY` |
+| Claude | `AnthropicModel()` (default `claude-haiku-5-5`) uses the official `anthropic` package, so it takes `ANTHROPIC_API_KEY` or workload identity federation (`ANTHROPIC_FEDERATION_RULE_ID` and friends), with no key stored anywhere. `temperature` is only sent when you set it |
+| Anything LangChain supports | `LangChainChatModel(...)`: Bedrock, Vertex, ... |
+| From env | `model_from_env()` reads `AGENT_MODEL_PROVIDER=deepseek|anthropic|openai-compatible`, `AGENT_MODEL`, `AGENT_MODEL_BASE_URL`, `AGENT_MODEL_API_KEY` |
 | Offline / tests | `ScriptedModel(fn)` |
 
 Retries on 408/409/429/5xx (respecting `Retry-After`), JSON mode for structured stages, and token usage on every span.

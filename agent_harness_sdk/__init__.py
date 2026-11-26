@@ -14,6 +14,7 @@ from agent_harness_sdk.approvals import (
 from agent_harness_sdk.guardrails import Budget, Policy, PolicyVerdict, find_injection, redact
 from agent_harness_sdk.memory import InMemoryMemory, JsonlMemory, Memory, MemoryRecord
 from agent_harness_sdk.models import (
+    AnthropicModel,
     ChatModel,
     DeepSeekModel,
     ModelError,
@@ -37,6 +38,7 @@ __all__ = [
     "AgentEvent",
     "AgentLogger",
     "Analysis",
+    "AnthropicModel",
     "ApprovalRequest",
     "ApprovalResponse",
     "Approver",
